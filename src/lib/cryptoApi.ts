@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Types
 export interface CryptoPrice {
@@ -128,6 +129,30 @@ const mockWalletBalances: WalletBalance[] = [
   },
 ];
 
+const emptyWalletBalances: WalletBalance[] = [
+  {
+    currency: 'Bitcoin',
+    symbol: 'BTC',
+    amount: 0,
+    value: 0,
+    image: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+  },
+  {
+    currency: 'Ethereum',
+    symbol: 'ETH',
+    amount: 0,
+    value: 0,
+    image: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+  },
+  {
+    currency: 'Solana',
+    symbol: 'SOL',
+    amount: 0,
+    value: 0,
+    image: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+  },
+];
+
 // Hooks
 export const useCryptoPrices = () => {
   const [prices, setPrices] = useState<CryptoPrice[]>([]);
@@ -176,11 +201,23 @@ export const useTransactions = () => {
 
 export const useWalletBalances = () => {
   // In a real app, we would calculate this from blockchain data
-  const [balances, setBalances] = useState(mockWalletBalances);
+  const [balances, setBalances] = useState<WalletBalance[]>([]);
   const { prices } = useCryptoPrices();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    if (prices.length > 0) {
+    // Check if this is our test user
+    const isTestUser = user?.email === 'test@mail.com';
+    
+    // Set initial balances based on user
+    const initialBalances = isTestUser ? [...mockWalletBalances] : [...emptyWalletBalances];
+    setBalances(initialBalances);
+    setLoading(false);
+  }, [user]);
+  
+  useEffect(() => {
+    if (prices.length > 0 && balances.length > 0) {
       setBalances(prevBalances => 
         prevBalances.map(balance => {
           const price = prices.find(p => p.symbol === balance.symbol.toLowerCase());
@@ -191,9 +228,9 @@ export const useWalletBalances = () => {
         })
       );
     }
-  }, [prices]);
+  }, [prices, balances.length]);
 
-  return { balances, loading: false };
+  return { balances, loading };
 };
 
 export const getTotalBalance = (balances: WalletBalance[]) => {
